@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoJSON Map with Marker Clusters</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script>
+    // Initialize the map
+    var map = L.map('map').setView([21.146633, 79.088860], 5);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Initialize marker cluster group
+    var markers = L.markerClusterGroup();
+
+    // Load GeoJSON file
+    fetch('output.geojson')
+        .then(response => response.json())
+        .then(data => {
+            var geojsonLayer = L.geoJSON(data, {
+                onEachFeature: function (feature, layer) {
+                    if (feature.geometry.type === "Point" && feature.properties && feature.properties.address) {
+                        layer.bindPopup(feature.properties.address);
+                    }
+                },
+                style: function (feature) {
+                    if (feature.geometry.type === "LineString") {
+                        return { color: "blue", weight: 2 };
+                    }
+                },
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng);
+                }
+            });
+
+            // Separate points and lines
+            geojsonLayer.eachLayer(function(layer) {
+                if (layer.feature.geometry.type === "Point") {
+                    markers.addLayer(layer);
+                } else {
+                    layer.addTo(map); // add lines directly to map
+                }
+            });
+
+            // Add marker cluster group to map
+            map.addLayer(markers);
+        })
+        .catch(error => {
+            console.error('Error loading GeoJSON:', error);
+            alert('Failed to load GeoJSON file. Check the browser console for details.');
+        });
+</script>
+
+</body>
+</html>
